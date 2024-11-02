@@ -3,6 +3,9 @@ import { getFrameHtmlResponse } from '@coinbase/onchainkit/frame';
 import { NEXT_PUBLIC_URL } from '../../config';
 import projects from '../../projects.json';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     let body;
@@ -64,7 +67,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return new NextResponse('Project not found', { status: 500 });
     }
 
-    return new NextResponse(
+    const response = new NextResponse(
       getFrameHtmlResponse({
         buttons: [
           {
@@ -81,15 +84,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             target: currentProject.link,
           },
         ],
-        image: `${NEXT_PUBLIC_URL}/api/og?project=${encodeURIComponent(currentProject.name)}&description=${encodeURIComponent(currentProject.description)}&index=${currentIndex + 1}&total=${projects.length}`,
+        image: `${NEXT_PUBLIC_URL}/api/og?project=${encodeURIComponent(currentProject.name)}&description=${encodeURIComponent(currentProject.description)}&index=${currentIndex + 1}&total=${projects.length}&t=${Date.now()}`,
         post_url: `${NEXT_PUBLIC_URL}/api/projects`,
         state: { index: currentIndex },
       })
     );
+
+    // Add cache control headers
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    response.headers.set('Surrogate-Control', 'no-store');
+
+    return response;
   } catch (error) {
     console.error('Unexpected error:', error);
     return new NextResponse('Internal server error', { status: 500 });
   }
 }
-
-export const dynamic = 'force-dynamic';
